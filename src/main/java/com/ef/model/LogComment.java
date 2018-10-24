@@ -3,6 +3,14 @@ package com.ef.model;
 import javax.persistence.*;
 import java.util.Date;
 
+/**
+ * LogComment entity
+ * name: LogComment.java
+ * date: Oct 24, 2018
+ *
+ * @author Fernando Molina
+ * @version 1.0
+ */
 @Entity
 @Table(name = "log_comment")
 public class LogComment {

@@ -4,17 +4,24 @@ import com.ef.helpers.FileHelper;
 import com.ef.helpers.UtilsHelper;
 import com.ef.helpers.ValidatorHelper;
 import com.ef.model.LogComment;
+import com.ef.services.LogCommentService;
 import com.ef.services.LogFileService;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
-import org.hibernate.query.Query;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
+/**
+ * Main class that execute load and parser for a log file
+ * name: Parser.java
+ * date: Oct 24, 2018
+ *
+ * @author Fernando Molina
+ * @version 1.0
+ */
 public class Parser {
 
     public static void main(String[] args) {
@@ -27,7 +34,7 @@ public class Parser {
         SessionFactory factory = null;
         Session session = null;
         LogFileService logFileService = null;
-        Query query = null;
+        LogCommentService logCommentService = null;
 
         // Read command line parameters
         if (!ValidatorHelper.containElements(args)) {
@@ -51,7 +58,7 @@ public class Parser {
         }
 
         // Print expected inputs
-        //UtilsHelper.printInputs(inputs);
+        UtilsHelper.printInputs(inputs);
 
         // Select valid log file
         String filePath = FileHelper.selectFile();
@@ -66,67 +73,69 @@ public class Parser {
 
         session = factory.openSession();
         logFileService = new LogFileService(session);
+        logCommentService = new LogCommentService(session);
 
-        try {
-            // Load log file
-            logFileService.loadLogFileFromFile(filePath, expectedParameters);
-        } catch (Exception e) {
-            System.err.println("Error while loading file.");
-            System.exit(0);
-        }
+//        try {
+//            // Load log file
+//            logFileService.loadLogFileFromFile(filePath, expectedParameters);
+//        } catch (Exception e) {
+//            System.err.println("Error while loading file.");
+//            System.exit(0);
+//        }
 
         // Prepare dates
-        
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String sd = UtilsHelper.calculateDate("start", inputs.get("--startDate"), inputs.get("--duration"));
+        String ed = UtilsHelper.calculateDate("end", inputs.get("--startDate"), inputs.get("--duration"));
+        List<String> logIps = null;
 
-        SimpleDateFormat sdfStart = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        SimpleDateFormat sdfEnd = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        String sd = "2017-01-01 00:00:00";
-        String ed = "2017-01-01 00:00:59";
         try {
-            System.out.println("StartDate: " + sdfStart.parse(sd));
-            System.out.println("EndDate: " + sdfStart.parse(ed));
+            // Search for log file records using entered criteria
+            logIps = logFileService.getLogFileIps(sdf.parse(sd), sdf.parse(ed), inputs.get("--threshold"));
+            // Comment due is used for test purposes
+            //logIps = logFileService.getLogFileIps(sdf.parse("2017-01-01 00:00:00"), sdf.parse("2017-01-01 00:00:59"), "0");
         } catch(Exception e) {
-
-        }
-
-        //query = session.createQuery("select log.ip from LogFile log where log.ip = :ip group by ip having total < 6 order by total");
-        query = session.createQuery("SELECT log.ip, COUNT(*) FROM LogFile log WHERE log.date BETWEEN :startDate AND :endDate GROUP BY log.ip HAVING COUNT(*) < :threshold ORDER BY log.ip");
-        //query = session.createQuery("SELECT log.ip, log.date FROM LogFile log WHERE log.date BETWEEN :startDate AND :endDate GROUP BY log.ip HAVING COUNT(*) < :threshold ORDER BY log.ip");
-        //query = session.createQuery("SELECT log.ip, DATE_FORMAT(log.date, '%Y-%m-%d %H:%i:%s') FROM LogFile log WHERE log.date BETWEEN '2017-01-01 00:00:00' AND '2017-01-01 00:00:59' ORDER BY log.date");
-        //query = session.createQuery("SELECT log.ip, DATE_FORMAT(log.date, '%Y-%m-%d %H:%i:%s') FROM LogFile log WHERE log.date BETWEEN :startDate AND :endDate ORDER BY log.date");
-        //query = session.createQuery("SELECT log.ip, COUNT(*) from LogFile log GROUP BY log.ip HAVING COUNT(*) < 6 ORDER BY log.ip");
-        try {
-            query.setParameter("startDate", sdfStart.parse("2017-01-01 00:00:00"));
-            query.setParameter("endDate", sdfEnd.parse("2017-01-01 00:00:59"));
-        } catch (ParseException pe) {
-            System.err.println("Error parsing dates");
+            System.err.println("Error parsing startDate/endDate while getting IPs please verify.");
             System.exit(0);
         }
-//        query.setParameter("startDate", "2017-01-01 00:00:00");
-//        query.setParameter("endDate", "2017-01-01 00:00:59");
-        query.setParameter("threshold", new Long(6));
 
-        List<?> logFiles = query.list();//session.createQuery("select log.ip from LogFile log", LogFile.class).list();
-
-        List<LogComment> logComments = session.createQuery("from LogComment", LogComment.class).list();
-
-        if (logFiles != null && !logFiles.isEmpty()) {
-            System.out.println("Log Files entries: " + logFiles.size());
-//            logFiles.forEach(System.out::println);
-            for(int i = 0; i < logFiles.size(); i++) {
-                Object[] row = (Object[]) logFiles.get(i);
-                System.out.println("IP: " + row[0] + " Times: " + row[1]);
-            }
-        } else {
-            System.out.println("Log Files entries: No entries found");
+        try {
+            String requestedDate = inputs.get("--startDate").replace(".", " ");
+            // Process comments based on results
+            logCommentService.loadLogCommentsFromResult(sdf.parse(requestedDate), inputs.get("--duration"),
+            inputs.get("--threshold"), sd, ed, logIps);
+        } catch (Exception e) {
+            System.err.println("Error parsing startDate while inserting Comment please verify.");
+            System.exit(0);
         }
-
-        System.out.println("Log Files entries: " + (logFiles != null && !logFiles.isEmpty()?logFiles.size():"No entries found"));
-        System.out.println("Log Comments entries: " + (logComments != null && !logComments.isEmpty()?logComments.size():"No entries found"));
+//
+//
+//        List<LogComment> logComments = session.createQuery("from LogComment", LogComment.class).list();
+//
+//        if (logIps != null && !logIps.isEmpty()) {
+//            System.out.println("Log Files entries: " + logIps.size());
+////            logFiles.forEach(System.out::println);
+//            for(int i = 0; i < logIps.size(); i++) {
+//                //Object[] row = (Object[]) logFiles.get(i);
+//                //System.out.println("IP: " + row[0] + " Times: " + row[1]);
+//                System.out.println("IP: " + logIps.get(i));
+//            }
+//        } else {
+//            System.out.println("Log Files entries: No entries found");
+//        }
+//
+//        System.out.println("Log Files entries: " + (logIps != null && !logIps.isEmpty()?logIps.size():"No entries found"));
+//        System.out.println("Log Comments entries: " + (logComments != null && !logComments.isEmpty()?logComments.size():"No entries found"));
 
         session.close();
+        System.exit(0);
     }
 
+    /**
+     * Method used to initialize rules to validate each input
+     *
+     * @return List of rules
+     */
     public static List<String> initializeRules() {
         List<String> inputRules = new ArrayList<>();
         inputRules.add("^--startDate=([0-9]{4})-([0-1][0-9])-([0-3][0-9]).([0-1][0-9]|[2][0-3]):([0-5][0-9]):([0-5][0-9])$");
@@ -136,6 +145,11 @@ public class Parser {
         return inputRules;
     }
 
+    /**
+     * Method used to initialize expected parameters for log file
+     *
+     * @return Map of expected parameters
+     */
     public static Map<Integer, String> initializeExpectedParameters() {
         Map<Integer, String> expectedParameters = new HashMap<>();
         expectedParameters.put(1, "date");

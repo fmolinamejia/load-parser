@@ -3,6 +3,14 @@ package com.ef.model;
 import javax.persistence.*;
 import java.util.Date;
 
+/**
+ * LogFile entity
+ * name: LogFile.java
+ * date: Oct 24, 2018
+ *
+ * @author Fernando Molina
+ * @version 1.0
+ */
 @Entity
 @Table(name = "log_file")
 public class LogFile {
