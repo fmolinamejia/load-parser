@@ -3,7 +3,6 @@ package com.ef;
 import com.ef.helpers.FileHelper;
 import com.ef.helpers.UtilsHelper;
 import com.ef.helpers.ValidatorHelper;
-import com.ef.model.LogComment;
 import com.ef.services.LogCommentService;
 import com.ef.services.LogFileService;
 import org.hibernate.Session;
@@ -75,13 +74,13 @@ public class Parser {
         logFileService = new LogFileService(session);
         logCommentService = new LogCommentService(session);
 
-//        try {
-//            // Load log file
-//            logFileService.loadLogFileFromFile(filePath, expectedParameters);
-//        } catch (Exception e) {
-//            System.err.println("Error while loading file.");
-//            System.exit(0);
-//        }
+        try {
+            // Load log file
+            logFileService.loadLogFileFromFile(filePath, expectedParameters);
+        } catch (Exception e) {
+            System.err.println("Error while loading file.");
+            System.exit(0);
+        }
 
         // Prepare dates
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -108,24 +107,6 @@ public class Parser {
             System.err.println("Error parsing startDate while inserting Comment please verify.");
             System.exit(0);
         }
-//
-//
-//        List<LogComment> logComments = session.createQuery("from LogComment", LogComment.class).list();
-//
-//        if (logIps != null && !logIps.isEmpty()) {
-//            System.out.println("Log Files entries: " + logIps.size());
-////            logFiles.forEach(System.out::println);
-//            for(int i = 0; i < logIps.size(); i++) {
-//                //Object[] row = (Object[]) logFiles.get(i);
-//                //System.out.println("IP: " + row[0] + " Times: " + row[1]);
-//                System.out.println("IP: " + logIps.get(i));
-//            }
-//        } else {
-//            System.out.println("Log Files entries: No entries found");
-//        }
-//
-//        System.out.println("Log Files entries: " + (logIps != null && !logIps.isEmpty()?logIps.size():"No entries found"));
-//        System.out.println("Log Comments entries: " + (logComments != null && !logComments.isEmpty()?logComments.size():"No entries found"));
 
         session.close();
         System.exit(0);
